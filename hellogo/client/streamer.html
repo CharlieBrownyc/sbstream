@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sender</title>
+</head>
+<body>
+<h2>🎥 송신 클라이언트</h2>
+<label>서버 주소: <input id="wsUrl" value="ws://localhost:8090/ws" size="40" /></label>
+<button onclick="connect()">접속</button>
+<button onclick="disconnect()">종료</button>
+<br /><br />
+<video id="video" autoplay playsinline></video>
+<div id="chatContainer">
+    <div id="chatMessages" style="height: 200px; overflow-y: scroll; border: 1px solid #ccc;"></div>
+    <input type="text" id="chatInput" placeholder="Type your message..."/>
+    <button id="sendChatBtn">Send</button>
+</div>
+
+
+<script>
+    // chat 기능
+    const sendBtn = document.getElementById("sendChatBtn");
+    const chatInput = document.getElementById("chatInput");
+
+    let ws = null;
+    let videoStream = null;
+    let audioStream = null;
+    let audioCtx, processor, source;
+    
+    chatInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") sendBtn.click();
+    });
+
+    let myID = generateId(); // 브라우저 새로고침마다 달라짐
+    sendBtn.addEventListener("click", () => {
+        const text = chatInput.value.trim();
+        if (!text) return;
+
+        const chatMsg = {
+            type: "chat",
+            data: text,
+            timestamp: Date.now(),
+            uid: myID
+        };
+
+        displayChatMessage(chatMsg);
+        ws.send(JSON.stringify(chatMsg));
+        chatInput.value = "";
+    });
+    function displayChatMessage(msg) {
+        const div = document.createElement("div");
+        div.textContent = `[${new Date(msg.timestamp).toLocaleTimeString()}] [${msg.uid || "Unknown"}]나▶ ${msg.data}`;
+        document.getElementById("chatMessages").appendChild(div);
+    }
+    function generateId() {
+        return 'user-' + Math.random().toString(36).substr(2, 9);
+    }
+
+    function connect() {
+        const url = document.getElementById("wsUrl").value;
+        ws = new WebSocket(url);
+
+        ws.onopen = () => {
+            console.log("WebSocket connected");
+
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                .then(stream => {
+                    videoStream = stream;
+                    document.getElementById("video").srcObject = stream;
+
+                    startVideoStream();
+                    startAudioStream(stream);
+                });
+        };
+
+        ws.onclose = () => {
+            console.log("WebSocket closed");
+            stopAudio();
+        };
+
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            console.log("Received message:", msg);
+
+            if (msg.type === "chat") {
+                const div = document.createElement("div");
+                div.textContent = `[${new Date(msg.timestamp).toLocaleTimeString()}] [${msg.uid || "Unknown"}] ${msg.data}`;
+                document.getElementById("chatMessages").appendChild(div);
+
+                // 스크롤 맨 아래로
+                const container = document.getElementById("chatMessages");
+                container.scrollTop = container.scrollHeight;
+            }
+
+            // ...기존 video/audio 처리도 여기에 같이
+        };
+
+    }
+
+    function disconnect() {
+        if (ws) ws.close();
+    }
+
+    function startVideoStream() {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        const video = document.getElementById("video");
+
+        setInterval(() => {
+            if (ws?.readyState === WebSocket.OPEN) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob(blob => {
+                    if (!blob) {
+                        console.log("Failed to capture blob from canvas. loading video may not be ready.");
+                        return;
+                    }
+                    blob.arrayBuffer().then(buffer => {
+                        const payload = {
+                            type: "video",
+                            timestamp: Date.now(),
+                            uid: myID,
+                            frame: "data:image/jpeg;base64," + btoa(String.fromCharCode(...new Uint8Array(buffer)))
+                        };
+                        ws.send(JSON.stringify(payload));
+                    });
+                }, "image/jpeg", 0.6);
+            }
+        }, 100);
+    }
+
+    function startAudioStream(stream) {
+        audioCtx = new AudioContext();
+        processor = audioCtx.createScriptProcessor(2048, 1, 1);
+        source = audioCtx.createMediaStreamSource(stream);
+
+        processor.onaudioprocess = (e) => {
+            if (ws?.readyState === WebSocket.OPEN) {
+                const pcm = e.inputBuffer.getChannelData(0);
+                const int16 = new Int16Array(pcm.length);
+                for (let i = 0; i < pcm.length; i++) {
+                    int16[i] = pcm[i] * 32767;
+                }
+                const b64 = btoa(String.fromCharCode(...new Uint8Array(int16.buffer)));
+                ws.send(JSON.stringify({
+                    type: "audio",
+                    timestamp: Date.now(),
+                    uid: myID,
+                    data: b64
+                }));
+            }
+        };
+
+        source.connect(processor);
+        processor.connect(audioCtx.destination);
+    }
+
+    function stopAudio() {
+        if (processor) processor.disconnect();
+        if (source) source.disconnect();
+        if (audioCtx) audioCtx.close();
+    }
+</script>
+</body>
+</html>
