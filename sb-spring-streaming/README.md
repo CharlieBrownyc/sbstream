@@ -5,8 +5,21 @@
 **file(video) streaming app by SpringBoot only**
 
 ## Architecture
-
-![image](architecture.png)
+```mermaid
+flowchart LR
+    A("User") -.->|Request Get List| B
+    B("Controller<br>(dto)") --> C("Service<br>(FileList)")
+    C --> D("DTO")
+    B -.->|FileList| A
+    A("User") -.->|Request with filename| B
+    B -.->|play| A 
+```
+## Transition
+* HW
+  * Local -> Cloud Database
+  * Local File -> Storage -> CDN
+* SW
+  * local file -> cms -> cloud cms
 
 ## Getting Started
 
