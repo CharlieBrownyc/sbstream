@@ -1,5 +1,18 @@
 # SpringBoot relay Server
-## SpringBoot + Nginx/rtmp (docker)
+## Description
+* SpringBoot : Url Broker
+* Streaming : Nginx + rtmp plugin (docker)
+## Architecture
+```mermaid
+flowchart RL
+    A("User") -.->|Request| B
+    B("Controller") -.->|Stream URL| A    
+    subgraph docker
+      C("Nginx<br>RTMP")
+    end
+  A -.->|Req m3u8| C
+  C -.->|Streaming Video| A
+```
 ### docker-compose.yml
 ```yaml
 #version: "3.7"
