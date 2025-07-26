@@ -1,0 +1,65 @@
+import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:flutter/services.dart';
+
+void main() => runApp(MyApp());
+
+class MyApp extends StatelessWidget {
+  // const MyApp({super.key});
+  static const platform = MethodChannel('kr.co.mjpegstreamer.mjpegstreamer/camera');
+
+  final urlController = TextEditingController(text: "ws://192.168.0.102:8090/ws");
+  TextEditingController resolutionController = TextEditingController(text: "640x480");
+  TextEditingController jpegQualityController = TextEditingController(text: "60");
+
+  // This widget is the root of your application.
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'MJpeg Streamer',
+      home: Scaffold(
+        appBar: AppBar(title: Text('Native MJPEG Sender')),
+        body: Column(
+          children: [
+            TextField(
+              controller: urlController,
+              decoration: InputDecoration(labelText: 'WebSocket URL'),
+            ),
+            TextField(
+              controller: resolutionController,
+              decoration: InputDecoration(labelText: 'Resolution (e.g., 640x480)'),
+            ),
+            TextField(
+              controller: jpegQualityController,
+              decoration: InputDecoration(labelText: 'JPEG Quality (0-100)'),
+              keyboardType: TextInputType.number,
+            ),
+            SizedBox(height: 16.0),
+            ElevatedButton(
+              onPressed: () {
+                final res = resolutionController.text.split('x');
+                final width = int.tryParse(res[0]) ?? 640;
+                final height = int.tryParse(res[1]) ?? 480;
+                final jpegQ = int.tryParse(jpegQualityController.text) ?? 60;
+                platform.invokeMethod('startCamera', {
+                  'ws_url': urlController.text.trim(),
+                  'width': width,
+                  'height': height,
+                  'jpeg_quality': jpegQ,
+                });
+              },
+              child: Text('Start Streaming'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                platform.invokeMethod('stopCamera');
+              },
+              child: Text('Stop Streaming'),
+            ),
+            Expanded(child: Container(color: Colors.black)), // 영상 프리뷰 영역
+          ],
+        ),
+      ),
+    );
+  }
+}
