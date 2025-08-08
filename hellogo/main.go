@@ -27,12 +27,14 @@ func handleWS(w http.ResponseWriter, r *http.Request) {
 
 	mutex.Lock()
 	clients[conn] = true
+	log.Println("New client connected:", conn.RemoteAddr())
 	mutex.Unlock()
 
 	for {
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
-			log.Println("read error:", err)
+			log.Printf("read error from %s: %v\n", conn.RemoteAddr().String(), err)
+			// log.Println("read error:", err)
 			break
 		}
 
