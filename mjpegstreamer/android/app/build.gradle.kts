@@ -60,10 +60,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
 
     // JSON
-    implementation("org.json:json:20240303")
+//    implementation("org.json:json:20240303")
 
     // Flutter embedding (already auto-added usually)
-    implementation("io.flutter:flutter_embedding_debug:1.0.0")
+//    implementation("io.flutter:flutter_embedding_debug:1.0.0")
 }
 
 flutter {

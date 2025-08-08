@@ -13,7 +13,7 @@ class MjpegSender extends StatefulWidget {
 class _MjpegSenderState extends State<MjpegSender> {
   static const platform = MethodChannel('kr.co.brownyc.mjpegstreamer/camera');
 
-  final _wsController = TextEditingController(text: "ws://192.168.0.102:8090/ws");
+  late TextEditingController _wsController;
   TextEditingController resolutionController = TextEditingController(text: "640x480");
   TextEditingController jpegQualityController = TextEditingController(text: "60");
 
@@ -50,6 +50,14 @@ class _MjpegSenderState extends State<MjpegSender> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    final provider = Provider.of<commonProvider>(context, listen: false);
+    print("⚠️ initState: url=${provider.url}");
+    _wsController = TextEditingController(text: provider.url);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final provider = Provider.of<commonProvider>(context);
     return Column(
@@ -57,7 +65,16 @@ class _MjpegSenderState extends State<MjpegSender> {
         TextField(
           controller: _wsController,
           decoration: InputDecoration(labelText: "WebSocket URL"),
+          onChanged: (value) {
+            provider.url = value;
+          }
         ),
+        // ElevatedButton(
+        //   onPressed: () {
+        //     provider.url = _wsController.text;
+        //   },
+        //   child: Text('저장'),
+        // ),
         TextField(
           controller: resolutionController,
           decoration: InputDecoration(labelText: 'Resolution (e.g., 640x480)'),
@@ -71,7 +88,7 @@ class _MjpegSenderState extends State<MjpegSender> {
         ElevatedButton(
           onPressed: () {
             print("⚠️ onPressed: isBusy=${isBusy.toString()}");
-            provider.setUrl(_wsController.text);
+            // provider.url = _wsController.text;
             isBusy ? null : _toggleStream();
           },
           child: Text(_isStreaming ? "송출 중단" : "송출 시작"),

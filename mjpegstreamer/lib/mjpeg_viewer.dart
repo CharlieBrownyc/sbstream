@@ -15,8 +15,7 @@ class MjpegViewer extends StatefulWidget {
 }
 
 class _MjpegViewerState extends State<MjpegViewer> {
-  final TextEditingController _urlController =
-  TextEditingController(text: "ws://192.168.0.10:8090/ws");
+  late TextEditingController _urlController;
   WebSocket? _socket;
   Uint8List? _latestFrame;
   bool isConnected = false;
@@ -46,6 +45,13 @@ class _MjpegViewerState extends State<MjpegViewer> {
       isConnected = false;
       _socket = null;
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final provider = Provider.of<commonProvider>(context, listen: false);
+    _urlController = TextEditingController(text: provider.url);
   }
 
   @override
